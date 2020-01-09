@@ -1,3 +1,3 @@
-module github.com/Krylphi/errcode
+module github.com/krylphi/errcode
 
 go 1.13

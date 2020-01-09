@@ -55,7 +55,14 @@ func NewGeneralErrorWithCustomCodes(code string, codeGen func(string string) str
 	c := codeGen(code)
 	n := code
 	e := errors.New(c)
-	r := &generalError{codeGen: codeGen, sumCodes: inheritCodeGen, err: e, cause: e, code: c, codeNote: fmt.Sprintf("%v:%v", c, n)}
+	r := &generalError{
+		codeGen:  codeGen,
+		sumCodes: inheritCodeGen,
+		err:      e,
+		cause:    e,
+		code:     c,
+		codeNote: concatenate(c, ":", n),
+	}
 	r.export.Store("")
 	return r
 }
@@ -84,6 +91,7 @@ func (r generalError) Error() string {
 
 	if emptyExp() {
 		export = fmt.Sprintf("[%v: %v] %v", r.ErrorCode(), r.err, r.SysMessage())
+		// concatenate("[", r.ErrorCode(), ":", r.err.Error(), "] ", r.SysMessage())
 		r.export.Store(export)
 	}
 
@@ -107,29 +115,57 @@ func (r *generalError) ExternalErrMess(err error) ErrSeed {
 		return r.mes
 	}
 
-	return &generalError{err: fmt.Errorf("%w: %v", r.err, err.Error()), mes: mes(), cause: err, code: r.code}
+	return &generalError{
+		codeGen:  r.codeGen,
+		sumCodes: r.sumCodes,
+		err:      fmt.Errorf("%w: %v", r.err, err.Error()),
+		cause:    err,
+		export:   atomic.Value{},
+		code:     r.code,
+		codeNote: r.codeNote,
+		mes:      mes(),
+	}
 }
 
 // SubType creates a subtype of GeneralError
 func (r generalError) SubType(errSubType string) ErrSeed {
 	c := r.codeGen(errSubType)
 	return &generalError{
+		codeGen:  r.codeGen,
+		sumCodes: r.sumCodes,
 		err:      fmt.Errorf("%w.%v", r.err, c),
-		mes:      r.mes,
 		cause:    r.cause,
 		code:     r.sumCodes(r.code, c),
 		codeNote: fmt.Sprintf("%v ~> %v:%v", r.codeNote, c, errSubType),
+		// concatenate("%v ~> %v:%v", r.codeNote, " ~> ", c, ":",errSubType),
+		mes: r.mes,
 	}
 }
 
 // Message describes error
 func (r generalError) Message(message string) ErrSeed {
-	return &generalError{err: r.err, mes: message, cause: r.cause, code: r.code, codeNote: r.codeNote}
+	return &generalError{
+		codeGen:  r.codeGen,
+		sumCodes: r.sumCodes,
+		err:      r.err,
+		cause:    r.cause,
+		code:     r.code,
+		codeNote: r.codeNote,
+		mes:      message,
+	}
 }
 
 // MessageF describes error with formatting
 func (r generalError) MessageF(format string, a ...interface{}) ErrSeed {
-	return &generalError{err: r.err, mes: fmt.Sprintf(format, a...), cause: r.cause, code: r.code, codeNote: r.codeNote}
+	return &generalError{
+		codeGen:  r.codeGen,
+		sumCodes: r.sumCodes,
+		err:      r.err,
+		cause:    r.cause,
+		code:     r.code,
+		codeNote: r.codeNote,
+		mes:      fmt.Sprintf(format, a...),
+	}
 }
 
 // Unwrap is used for errors.Is(...) and returns inner error
@@ -186,7 +222,7 @@ func (r generalError) SysMessage() string {
 
 // FmtResponse formats response according to template with code of this error
 func (r generalError) FmtResponse(template string) string {
-	return fmt.Sprintf("%v \nCODE: %v", template, r.ErrorCode())
+	return concatenate(template, "\nCODE: ", r.ErrorCode())
 }
 
 // Make produces instance of GeneralError
@@ -269,4 +305,12 @@ func uint32toStr36(value uint32) string {
 		r[i], r[j] = r[j], r[i]
 	}
 	return string(r)
+}
+
+func concatenate(strs ...string) string {
+	b := strings.Builder{}
+	for _, s := range strs {
+		b.WriteString(s)
+	}
+	return b.String()
 }

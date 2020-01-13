@@ -120,7 +120,7 @@ func (r *generalError) ExternalErrMess(err error) ErrSeed {
 		sumCodes: r.sumCodes,
 		err:      fmt.Errorf("%w: %v", r.err, err.Error()),
 		cause:    err,
-		export:   atomic.Value{},
+		export:   nil,
 		code:     r.code,
 		codeNote: r.codeNote,
 		mes:      mes(),

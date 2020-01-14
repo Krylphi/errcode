@@ -116,60 +116,36 @@ func (r *generalError) ExternalErrMess(err error) ErrSeed {
 		return r.mes
 	}
 
-	return &generalError{
-		codeGen:  r.codeGen,
-		sumCodes: r.sumCodes,
-		err:      fmt.Errorf("%w: %v", r.err, err.Error()),
-		cause:    err,
-		export:   atomic.Value{},
-		code:     r.code,
-		codeNote: r.codeNote,
-		mes:      mes(),
-	}
+	res := r.clone()
+	res.mes = mes()
+	res.err = fmt.Errorf("%w: %v", r.err, err.Error())
+	res.cause = err
+	return res
 }
 
 // SubType creates a subtype of GeneralError
 func (r generalError) SubType(errSubType string) ErrSeed {
 	c := r.codeGen(errSubType)
-	return &generalError{
-		codeGen:  r.codeGen,
-		sumCodes: r.sumCodes,
-		err:      fmt.Errorf("%w.%v", r.err, c),
-		cause:    r.cause,
-		export:   atomic.Value{},
-		code:     r.sumCodes(r.code, c),
-		codeNote: fmt.Sprintf("%v ~> %v:%v", r.codeNote, c, errSubType),
-		// concatenate("%v ~> %v:%v", r.codeNote, " ~> ", c, ":",errSubType),
-		mes: r.mes,
-	}
+	res := r.clone()
+	res.err = fmt.Errorf("%w.%v", r.err, c)
+	res.code = r.sumCodes(r.code, c)
+	res.cause = fmt.Errorf("%w.%v", r.err, c)
+	res.codeNote = fmt.Sprintf("%v ~> %v:%v", r.codeNote, c, errSubType)
+	return res
 }
 
 // Message describes error
 func (r generalError) Message(message string) ErrSeed {
-	return &generalError{
-		codeGen:  r.codeGen,
-		sumCodes: r.sumCodes,
-		err:      r.err,
-		cause:    r.cause,
-		export:   atomic.Value{},
-		code:     r.code,
-		codeNote: r.codeNote,
-		mes:      message,
-	}
+	res := r.clone()
+	r.mes = message
+	return res
 }
 
 // MessageF describes error with formatting
 func (r generalError) MessageF(format string, a ...interface{}) ErrSeed {
-	return &generalError{
-		codeGen:  r.codeGen,
-		sumCodes: r.sumCodes,
-		err:      r.err,
-		cause:    r.cause,
-		export:   atomic.Value{},
-		code:     r.code,
-		codeNote: r.codeNote,
-		mes:      fmt.Sprintf(format, a...),
-	}
+	res := r.clone()
+	res.mes = fmt.Sprintf(format, a...)
+	return res
 }
 
 // Unwrap is used for errors.Is(...) and returns inner error
@@ -237,6 +213,19 @@ func (r *generalError) Make() GeneralError {
 // Produce is for producing subtype of GeneralError
 func (r *generalError) Produce() ErrSeed {
 	return r
+}
+
+func (r *generalError) clone() *generalError {
+	return &generalError{
+		codeGen:  r.codeGen,
+		sumCodes: r.sumCodes,
+		err:      r.err,
+		cause:    r.cause,
+		export:   atomic.Value{},
+		code:     r.code,
+		codeNote: r.codeNote,
+		mes:      r.mes,
+	}
 }
 
 func errCodeGen(base string) string {

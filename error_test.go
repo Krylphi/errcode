@@ -13,6 +13,13 @@ var (
 	geDescendant3           = geDescendant1.Produce().Message("geDescendant2").Make()
 	geDescendantExtRegular  = gError.Produce().ExternalErrMess(errFoo).Make()
 	geDescendant1ExtRegular = geDescendant1.Produce().ExternalErrMess(errFoo).Make()
+
+	ee = errors.New("pepega is here")
+	e  = NewGeneralError("Somebody").Make()
+	e1 = e.Produce().SubType("Once").Make()
+	e2 = e1.Produce().SubType("Told").Make()
+	e3 = e2.Produce().SubType("Me").Make()
+	e4 = e3.Produce().ExternalErrMess(ee).Make()
 )
 
 func Test_GeneralError(t *testing.T) {
@@ -84,4 +91,54 @@ func Test_GeneralError(t *testing.T) {
 			t.Fatalf("geDescendant1ExtRegular.Is(errFoo) got: %v, expected: %v", false, true)
 		}
 	})
+
+	t.Run("Descendants test", func(t *testing.T) {
+		if e4.ErrorCode() != e3.ErrorCode() {
+			t.Fatalf("e4.ErrorCode() != e3.ErrorCode() got: %v, expected: %v", false, true)
+		}
+
+		if e3.ErrorCode() == e2.ErrorCode() {
+			t.Fatalf("e3.ErrorCode() == e2.ErrorCode() got: %v, expected: %v", true, false)
+		}
+
+		if e3.ErrorCode() == e1.ErrorCode() {
+			t.Fatalf("e3.ErrorCode() == e1.ErrorCode() got: %v, expected: %v", true, false)
+		}
+
+		if e3.ErrorCode() == e.ErrorCode() {
+			t.Fatalf("e3.ErrorCode() == e.ErrorCode() got: %v, expected: %v", true, false)
+		}
+
+		if e2.ErrorCode() == e1.ErrorCode() {
+			t.Fatalf("e2.ErrorCode() == e1.ErrorCode() got: %v, expected: %v", true, false)
+		}
+
+		if e2.ErrorCode() == e.ErrorCode() {
+			t.Fatalf("e2.ErrorCode() == e.ErrorCode() got: %v, expected: %v", true, false)
+		}
+
+		if e1.ErrorCode() == e.ErrorCode() {
+			t.Fatalf("e1.ErrorCode() == e.ErrorCode() got: %v, expected: %v", true, false)
+		}
+
+		if !e4.Is(ee) {
+			t.Fatalf("e4.Is(ee) got: %v, expected: %v", false, true)
+		}
+
+		if !e4.Is(e3) {
+			t.Fatalf("e4.Is(e3) got: %v, expected: %v", false, true)
+		}
+		if !e4.Is(e2) {
+			t.Fatalf("e4.Is(e2) got: %v, expected: %v", false, true)
+		}
+
+		if !e4.Is(e1) {
+			t.Fatalf("e4.Is(e1) got: %v, expected: %v", false, true)
+		}
+
+		if !e4.Is(e) {
+			t.Fatalf("e4.Is(e) got: %v, expected: %v", false, true)
+		}
+	})
+
 }
